@@ -1,0 +1,63 @@
+name: Tests
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version to use (e.g. '3.11')"
+        type: string
+        required: false
+        default: "3.11"
+
+      # --- pytest inputs ---
+      tests-path:
+        description: "Path to the tests directory inside the caller's repository (required)"
+        type: string
+        required: true
+
+      pytest-args:
+        description: "Additional arguments to pass to pytest (e.g. '-v --tb=short')"
+        type: string
+        required: false
+        default: "-v --tb=short"
+
+      install-dependencies:
+        description: "Install project dependencies before running tests"
+        type: boolean
+        required: false
+        default: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # pytest – run unit and integration tests
+  # ---------------------------------------------------------------------------
+  pytest:
+    name: pytest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install project dependencies
+        if: ${{ inputs.install-dependencies }}
+        run: |
+          pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          elif [ -f pyproject.toml ]; then
+            pip install .
+          else
+            echo "No requirements.txt or pyproject.toml found. Installing pytest only."
+          fi
+
+      - name: Install pytest
+        run: pip install pytest pytest-cov
+
+      - name: Run pytest
+        run: pytest ${{ inputs.tests-path }} ${{ inputs.pytest-args }}

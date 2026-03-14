@@ -1,0 +1,62 @@
+name: Lint
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version to use (e.g. '3.11')"
+        type: string
+        required: false
+        default: "3.11"
+
+      # --- Ruff inputs ---
+      ruff-enabled:
+        description: "Enable ruff lint check"
+        type: boolean
+        required: false
+        default: true
+      ruff-config-path:
+        description: >
+          Path to the ruff.toml config file inside the caller's repository.
+          When omitted, the default config from this CI repository is used.
+        type: string
+        required: false
+        default: ""
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Ruff – fast Python linter and formatter
+  # ---------------------------------------------------------------------------
+  ruff:
+    name: Ruff
+    if: ${{ inputs.ruff-enabled }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+
+      - name: Checkout CI repository (for default configs)
+        if: ${{ inputs.ruff-config-path == '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/ci
+          ref: main
+          path: .ci-central
+          token: ${{ github.token }}
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff (caller config)
+        if: ${{ inputs.ruff-config-path != '' }}
+        run: ruff check . --config "${{ inputs.ruff-config-path }}"
+
+      - name: Run ruff (central CI config)
+        if: ${{ inputs.ruff-config-path == '' }}
+        run: ruff check . --config .ci-central/lint/ruff/configs/ruff.toml

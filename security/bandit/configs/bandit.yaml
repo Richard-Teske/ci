@@ -1,0 +1,38 @@
+# Bandit configuration file for security scanning
+# Reference: https://bandit.readthedocs.io/en/latest/config.html
+
+# Tests to skip (test IDs or names)
+# B101: assert_used - common in test files, can be excluded per context
+skips:
+  - B101  # Use of assert detected (common in tests)
+
+# Severity level to report: LOW, MEDIUM, HIGH
+# Only issues at or above this level will be reported
+severity: MEDIUM
+
+# Confidence level to report: LOW, MEDIUM, HIGH
+# Only issues at or above this level will be reported
+confidence: MEDIUM
+
+# Directories or files to exclude from the scan
+exclude_dirs:
+  - .venv
+  - venv
+  - env
+  - .env
+  - tests
+  - test
+  - dist
+  - build
+  - __pycache__
+  - .git
+  - .tox
+  - node_modules
+  - migrations
+
+# Maximum lines to show in context around each issue
+max_lines: 3
+
+# Plugins to enable/disable
+# Leave empty to use all default plugins
+tests: []

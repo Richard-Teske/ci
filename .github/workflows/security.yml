@@ -1,0 +1,139 @@
+name: Security
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version to use (e.g. '3.11')"
+        type: string
+        required: false
+        default: "3.11"
+
+      # --- Bandit inputs ---
+      bandit-enabled:
+        description: "Enable bandit security scan"
+        type: boolean
+        required: false
+        default: true
+      bandit-config-path:
+        description: >
+          Path to the bandit.yaml config file inside the caller's repository.
+          When omitted, the default config from this CI repository is used.
+        type: string
+        required: false
+        default: ""
+
+      # --- pip-audit inputs ---
+      pip-audit-enabled:
+        description: "Enable pip-audit vulnerability scan"
+        type: boolean
+        required: false
+        default: true
+
+      # --- Semgrep inputs ---
+      semgrep-enabled:
+        description: "Enable semgrep security scan"
+        type: boolean
+        required: false
+        default: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Bandit – static analysis for Python security issues
+  # ---------------------------------------------------------------------------
+  bandit:
+    name: Bandit
+    if: ${{ inputs.bandit-enabled }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+
+      - name: Checkout CI repository (for default configs)
+        if: ${{ inputs.bandit-config-path == '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/ci
+          ref: main
+          path: .ci-central
+          token: ${{ github.token }}
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install bandit
+        run: pip install bandit
+
+      - name: Run bandit (caller config)
+        if: ${{ inputs.bandit-config-path != '' }}
+        run: bandit -c "${{ inputs.bandit-config-path }}" -r .
+
+      - name: Run bandit (central CI config)
+        if: ${{ inputs.bandit-config-path == '' }}
+        run: bandit -c .ci-central/security/bandit/configs/bandit.yaml -r .
+
+  # ---------------------------------------------------------------------------
+  # pip-audit – vulnerability scan for installed Python packages
+  # ---------------------------------------------------------------------------
+  pip-audit:
+    name: pip-audit
+    if: ${{ inputs.pip-audit-enabled }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Install project dependencies (if requirements.txt exists)
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          elif [ -f pyproject.toml ]; then
+            pip install .
+          else
+            echo "No requirements.txt or pyproject.toml found. Scanning without installing dependencies."
+          fi
+
+      - name: Run pip-audit
+        run: pip-audit --aliases --desc .
+
+  # ---------------------------------------------------------------------------
+  # Semgrep – pattern-based static analysis for security vulnerabilities
+  # ---------------------------------------------------------------------------
+  semgrep:
+    name: Semgrep
+    if: ${{ inputs.semgrep-enabled }}
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+
+      - name: Run semgrep
+        run: >
+          semgrep scan
+          --config auto
+          --error
+          --json-output=semgrep-report.json
+          .
+
+      - name: Upload semgrep report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: semgrep-report.json
+          retention-days: 30
