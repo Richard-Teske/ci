@@ -40,3 +40,23 @@
 - **Status**: ✅ Concluído
 - **Arquivos Relacionados**: `README.md`, `current-task.md`
 - **Dependencias**: Todos os workflows criados
+
+---
+
+## Workflow de Build de Imagens Docker
+- **Descrição**: Criar reusable workflow `build.yml` para construir imagens Docker e fazer push para o GitHub Container Registry (GHCR), com versionamento extraído do `pyproject.toml` e verificação de tag duplicada.
+- **Status**: ✅ Concluído
+
+### Criar workflow build.yml
+- **Descrição**: Reusable workflow com job `build-and-push`. Aceita `dockerfile-path` como input opcional (padrão: `Dockerfile` na raiz). Extrai a versão do `pyproject.toml`, monta a tag `<repo>:<version>`, verifica se a tag já existe no GHCR antes do push, e constrói/publica a imagem usando as actions oficiais do Docker.
+- **Resultado esperado**: Workflow funcional chamável via `uses: <org>/ci/.github/workflows/build.yml@main` que falha explicitamente se: Dockerfile não encontrado, `pyproject.toml` ausente ou sem versão, ou tag já existir no GHCR.
+- **Status**: ✅ Concluído
+- **Arquivos Relacionados**: `.github/workflows/build.yml`
+- **Dependencias**: Nenhuma
+
+### Atualizar documentação do build.yml
+- **Descrição**: Atualizar `README.md` com seção do novo workflow de Docker Build & Push, incluindo tabela de inputs, exemplo de uso e permissões necessárias. Registrar decisões no `decision-log.md`.
+- **Resultado esperado**: Documentação atualizada e consistente com os demais workflows.
+- **Status**: ✅ Concluído
+- **Arquivos Relacionados**: `README.md`, `decision-log.md`
+- **Dependencias**: Criação do `build.yml`
