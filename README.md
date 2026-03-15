@@ -8,6 +8,7 @@ Repositório central de **reusable workflows** do GitHub Actions para projetos P
 
 | Workflow | Arquivo | Jobs incluídas |
 |---|---|---|
+| Docker Build & Push | `.github/workflows/build.yml` | `build-and-push` |
 | Segurança | `.github/workflows/security.yml` | `bandit`, `pip-audit`, `semgrep` |
 | Testes | `.github/workflows/test.yml` | `pytest` |
 | Lint | `.github/workflows/lint.yml` | `ruff` |
@@ -32,9 +33,73 @@ jobs:
 
   lint:
     uses: <org>/ci/.github/workflows/lint.yml@main
+
+  docker:
+    uses: <org>/ci/.github/workflows/build.yml@main
+    permissions:
+      contents: read
+      packages: write
 ```
 
 > Substitua `<org>` pelo nome da sua organização ou usuário no GitHub.
+
+---
+
+## 🐳 build.yml
+
+Construção de imagem Docker e push para o GitHub Container Registry (GHCR).
+
+O workflow extrai a versão do `pyproject.toml` presente na raiz do repositório chamador e monta a tag no formato `<repository-name>:<version>`. Antes do push, verifica se a tag já existe no GHCR — falhando explicitamente caso positivo para evitar sobrescrita acidental.
+
+**Pré-requisitos no repositório chamador:**
+
+- Arquivo `pyproject.toml` na raiz com campo `version` preenchido (ex: `version = "1.0.0"`).
+- `Dockerfile` presente (na raiz ou no path fornecido via input).
+
+### Inputs
+
+| Input | Tipo | Obrigatório | Padrão | Descrição |
+|---|---|---|---|---|
+| `dockerfile-path` | string | não | `"Dockerfile"` | Path do `Dockerfile` no repositório chamador. Se o arquivo não existir, o workflow falha |
+
+### Condições de falha
+
+| Condição | Comportamento |
+|---|---|
+| `Dockerfile` não encontrado no path informado | ❌ Falha com mensagem de erro |
+| `pyproject.toml` ausente na raiz | ❌ Falha com mensagem de erro |
+| Campo `version` ausente ou vazio no `pyproject.toml` | ❌ Falha com mensagem de erro |
+| Tag `<repo>:<version>` já existe no GHCR | ❌ Falha com mensagem de erro |
+
+### Exemplo
+
+```yaml
+# .github/workflows/ci.yml no repositório chamador
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  docker:
+    uses: <org>/ci/.github/workflows/build.yml@main
+    permissions:
+      contents: read
+      packages: write
+    # com Dockerfile em path customizado:
+    # with:
+    #   dockerfile-path: "docker/Dockerfile"
+```
+
+### Permissões necessárias
+
+O job `build-and-push` requer permissão de escrita no registry. Declare as permissões no job chamador:
+
+```yaml
+permissions:
+  contents: read
+  packages: write
+```
 
 ---
 
@@ -130,6 +195,7 @@ Localização: [`lint/ruff/configs/ruff.toml`](lint/ruff/configs/ruff.toml)
 ci/
 ├── .github/
 │   └── workflows/
+│       ├── build.yml        # Reusable workflow – Docker build & push
 │       ├── security.yml     # Reusable workflow – segurança
 │       ├── test.yml         # Reusable workflow – testes
 │       └── lint.yml         # Reusable workflow – lint
