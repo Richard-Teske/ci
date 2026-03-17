@@ -22,3 +22,17 @@
 
 **Impacto**: Qualquer repositório com `pyproject.toml` versionado e um `Dockerfile` pode publicar imagens no GHCR com 5 linhas de YAML, com garantia de rastreabilidade por versão e proteção contra sobrescrita de tags já existentes.
 
+---
+
+# 2026-03-16 - Build Multi-Arquitetura no Workflow Docker
+
+**Contexto**: A imagem Docker gerada pelo `build.yml` era construída apenas para `linux/amd64` (arquitetura padrão do runner `ubuntu-latest`). Para suportar deployments em hardware ARM (ex: Raspberry Pi, instâncias AWS Graviton, Apple Silicon via Rosetta), era necessário produzir um manifesto OCI multi-arch.
+
+**Decisão**:
+- **`docker/setup-qemu-action@v3`** antes do Buildx: instala os binários QEMU para emulação de CPU, permitindo que o runner `linux/amd64` compile para outras arquiteturas (ex: `linux/arm64`).
+- **`docker/setup-buildx-action@v3`**: cria um builder com driver `docker-container`, único capaz de produzir manifestos multi-plataforma. O builder padrão do Docker (`docker` driver) não suporta multi-arch.
+- **Input `platforms`** com default `linux/amd64,linux/arm64`: cobre os casos de uso mais comuns sem exigir configuração do chamador. Valores adicionais como `linux/arm/v7` podem ser passados via input. A lista é repassada diretamente ao `docker/build-push-action`, que constrói e empurra um único manifesto de índice OCI com todos os alvos.
+- **Posicionamento dos steps**: QEMU e Buildx são configurados após o login no GHCR para que o builder autenticado já esteja disponível no momento em que o `build-push-action` inicia o push.
+
+**Impacto**: O GHCR passa a armazenar um manifesto de índice OCI multi-arch por tag. Clientes Docker em qualquer arquitetura suportada baixam automaticamente a camada correta via `docker pull`, sem necessidade de tags separadas por plataforma.
+

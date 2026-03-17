@@ -54,9 +54,15 @@
 - **Arquivos Relacionados**: `.github/workflows/build.yml`
 - **Dependencias**: Nenhuma
 
-### Atualizar documentação do build.yml
-- **Descrição**: Atualizar `README.md` com seção do novo workflow de Docker Build & Push, incluindo tabela de inputs, exemplo de uso e permissões necessárias. Registrar decisões no `decision-log.md`.
-- **Resultado esperado**: Documentação atualizada e consistente com os demais workflows.
+---
+
+## Build Multi-Arquitetura no Workflow Docker
+- **Descrição**: Estender o `build.yml` com suporte a builds multi-arch via Docker Buildx + QEMU, adicionando input `platforms` para o chamador customizar os alvos.
 - **Status**: ✅ Concluído
-- **Arquivos Relacionados**: `README.md`, `decision-log.md`
-- **Dependencias**: Criação do `build.yml`
+
+### Adicionar suporte a multi-arch no build.yml
+- **Descrição**: Adicionar input `platforms` (padrão `linux/amd64,linux/arm64`), steps `docker/setup-qemu-action@v3` e `docker/setup-buildx-action@v3`, e passar `platforms` para o `docker/build-push-action`.
+- **Resultado esperado**: Workflow produz um manifesto OCI multi-arch no GHCR com as plataformas configuradas. O chamador pode sobrescrever via `platforms`.
+- **Status**: ✅ Concluído
+- **Arquivos Relacionados**: `.github/workflows/build.yml`, `README.md`, `decision-log.md`
+- **Dependencias**: `build.yml` já existente
