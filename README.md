@@ -47,9 +47,9 @@ jobs:
 
 ## 🐳 build.yml
 
-Construção de imagem Docker e push para o GitHub Container Registry (GHCR).
+Construção de imagem Docker multi-arquitetura e push para o GitHub Container Registry (GHCR).
 
-O workflow extrai a versão do `pyproject.toml` presente na raiz do repositório chamador e monta a tag no formato `<repository-name>:<version>`. Antes do push, verifica se a tag já existe no GHCR — falhando explicitamente caso positivo para evitar sobrescrita acidental.
+O workflow extrai a versão do `pyproject.toml` presente na raiz do repositório chamador e monta a tag no formato `<repository-name>:<version>`. Antes do push, verifica se a tag já existe no GHCR — falhando explicitamente caso positivo para evitar sobrescrita acidental. O build é realizado via Docker Buildx com emulação QEMU, produzindo um único manifesto OCI multi-arch.
 
 **Pré-requisitos no repositório chamador:**
 
@@ -61,6 +61,7 @@ O workflow extrai a versão do `pyproject.toml` presente na raiz do repositório
 | Input | Tipo | Obrigatório | Padrão | Descrição |
 |---|---|---|---|---|
 | `dockerfile-path` | string | não | `"Dockerfile"` | Path do `Dockerfile` no repositório chamador. Se o arquivo não existir, o workflow falha |
+| `platforms` | string | não | `"linux/amd64,linux/arm64"` | Plataformas alvo separadas por vírgula (ex: `"linux/amd64,linux/arm64,linux/arm/v7"`) |
 
 ### Condições de falha
 
@@ -86,9 +87,10 @@ jobs:
     permissions:
       contents: read
       packages: write
-    # com Dockerfile em path customizado:
+    # opções customizáveis:
     # with:
     #   dockerfile-path: "docker/Dockerfile"
+    #   platforms: "linux/amd64,linux/arm64,linux/arm/v7"
 ```
 
 ### Permissões necessárias
