@@ -106,7 +106,7 @@ jobs:
           fi
 
       - name: Run pip-audit
-        run: pip-audit --aliases --desc .
+        run: pip-audit --aliases --desc on .
 
   # ---------------------------------------------------------------------------
   # Semgrep – pattern-based static analysis for security vulnerabilities
