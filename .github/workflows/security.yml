@@ -15,6 +15,14 @@ on:
         type: boolean
         required: false
         default: true
+      pip-audit-ignore-vulns:                              # <-- NOVO
+        description: >
+          Space-separated list of vulnerability IDs to ignore
+          (e.g. "GHSA-xxxx-yyyy-zzzz CVE-2024-12345").
+          When omitted, no vulnerabilities are ignored.
+        type: string
+        required: false
+        default: ""
       bandit-config-path:
         description: >
           Path to the bandit.yaml config file inside the caller's repository.
@@ -106,7 +114,14 @@ jobs:
           fi
 
       - name: Run pip-audit
-        run: pip-audit --aliases --desc on .
+        run: |
+          IGNORE_ARGS=""
+          if [ -n "${{ inputs.pip-audit-ignore-vulns }}" ]; then
+            for id in ${{ inputs.pip-audit-ignore-vulns }}; do
+              IGNORE_ARGS="$IGNORE_ARGS --ignore-vuln $id"
+            done
+          fi
+          pip-audit --aliases --desc on $IGNORE_ARGS .
 
   # ---------------------------------------------------------------------------
   # Semgrep – pattern-based static analysis for security vulnerabilities
